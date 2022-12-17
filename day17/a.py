@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from tqdm import tqdm
 
 @dataclass(order=True)
 class Point:
@@ -20,10 +21,8 @@ class Shape:
         for p in self.points:
             if p.x+direction < 0 or p.x+direction > 6:
                 return False
-
-            for f in floor:
-                if p.x+direction == f.x and p.y >= f.y:
-                    return False
+            if Point(p.x+direction, p.y) in floor:
+                return False
         return True
 
     def drop(self):
@@ -119,19 +118,13 @@ def get_next_shape(round):
 
     return None
 
-def update_floor(floor, piece):
-    down = float('inf')
+def update_floor(floor, shape):
     start = sorted(floor, key=lambda item: item.y)[0].y
-    for p in piece.points:
-        for f in floor:
-            if p.x == f.x:
-                if p.y < f.y:
-                    f.y = p.y
-            down = min(down, f.y)
-
+    floor = [*floor, *shape.points]
+    end = sorted(floor, key=lambda item: item.y)[0].y
     for p in floor:
-        p.y += (start - down)
-    return (start - down)
+        p.y += (start - end)
+    return (start - end), floor
 
 def print_result(floor):
     s_x = sorted(floor, key=lambda item: item.x)[0].x
@@ -143,24 +136,17 @@ def print_result(floor):
     ans = ''
     for y in range(s_y, e_y+1):
         for x in range(s_x, e_x+1):
-            if above(Point(x, y), floor):
-                ans += '.'
-            else:
+            if Point(x, y) in floor:
                 ans += '#'
+            else:
+                ans += '.'
         ans += '\n'
     print(ans)
 
-def above(point, floor):
-    for p in floor:
-        if point.x == p.x and point.y <= p.y:
-            return True
-    return False
-
-
-moves = Moves('input_test.txt')
+moves = Moves('input.txt')
 floor = [Point(0, 4), Point(1, 4), Point(2, 4), Point(3, 4), Point(4, 4), Point(5, 4), Point(6, 4)]
 total = 0
-for round in range(2022):
+for round in tqdm(range(2022)):
     shape = get_next_shape(round)
 
     shape.move(moves.get_next(), floor)
@@ -168,8 +154,7 @@ for round in range(2022):
         shape.drop()
         shape.move(moves.get_next(), floor)
 
-    total += update_floor(floor, shape)
-
-print_result(floor)
+    down, floor = update_floor(floor, shape)
+    total += down
 print(total)
 print('\n')
